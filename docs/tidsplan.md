@@ -8,8 +8,8 @@
 | Tisdag | Backend grundstruktur: Express, dotenv, cors, nodemon | Klart |
 | Onsdag | MySQL installerat och konfigurerat, databas skapad, backend kopplad via mysql2 | Klart |
 | Torsdag | ER-diagram och sitemap färdigställda | Klart |
-| Fredag | Tidsplan färdig, databastabeller skapade, backend-API för produkter | Pågår |
-| Lördag | React-grundstruktur, produktlista, produktsida | Planerat |
+| Fredag | Tidsplan färdig, databastabeller skapade, backend-API för produkter | Klart |
+| Lördag | React-grundstruktur, produktlista, produktsida |Pågår |
 | Söndag | Varukorg, kassa/checkout, order i databasen, admin: produkter och ordrar | Planerat |
 | Måndag | Inloggning (kund och admin), buffert för ofärdiga G-krav | Planerat |
 | Tisdag | Orderstatus, responsivitet, deploy, README, kravmatris, inlämning | Planerat |

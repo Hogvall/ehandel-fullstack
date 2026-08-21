@@ -3,13 +3,16 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors'; 
 import pool from './db.js';
+import productsRouter from './routes/products.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
-app.use(express());
+app.use(express.json());
+
+app.use('/api/products', productsRouter);
 
 app.get('/', (req, res)=> {
     res.json({message: 'Servern är igång!' });

@@ -1,49 +1,22 @@
-import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import ProductList from './pages/ProductList.jsx';
+import Cart from './pages/Cart.jsx';
 import './App.css';
 
 function App() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetch('http://localhost:3000/api/products')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Nätverksfel: ' + response.status);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setProducts(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) return <p>Laddar produkter...</p>;
-  if (error) return <p>Något gick fel: {error}</p>;
-
   return (
-    <div>
-      <h1>Våra produkter</h1>
-      {products.length === 0 ? (
-        <p>Inga produkter hittades.</p>
-      ) : (
-        <ul>
-          {products.map((product) => (
-            <li key={product.id}>
-              <strong>{product.name}</strong> – {product.price} kr
-              <br />
-              {product.description}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <BrowserRouter>
+      <nav>
+        <Link to="/">Produkter</Link>
+        {' | '}
+        <Link to="/varukorg">Varukorg</Link>
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<ProductList />} />
+        <Route path="/varukorg" element={<Cart />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

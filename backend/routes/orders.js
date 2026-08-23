@@ -67,4 +67,29 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  const { status } = req.body;
+  const validStatuses = ['Beställd', 'Behandlas', 'Levererad', 'Återbetald'];
+
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Ogiltig status' });
+  }
+
+  try {
+    const [result] = await pool.query(
+      'UPDATE orders SET status = ? WHERE id = ?',
+      [status, req.params.id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Ordern hittades inte' });
+    }
+
+    res.json({ message: 'Status uppdaterad' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Kunde inte uppdatera status' });
+  }
+});
+
 export default router;

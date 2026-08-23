@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useCart } from '../context/CartContext.jsx';
 
 function ProductList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { addToCart } = useCart();
+
 
   useEffect(() => {
     fetch('http://localhost:3000/api/products')
@@ -38,6 +41,8 @@ function ProductList() {
               <strong>{product.name}</strong> – {product.price} kr
               <br />
               {product.description}
+              <br />
+              <button onClick={() => addToCart(product)}>Lägg i varukorg</button>
             </li>
           ))}
         </ul>

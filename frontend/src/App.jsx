@@ -5,6 +5,7 @@ import Cart from './pages/Cart.jsx';
 import './App.css';
 import Checkout from './pages/Checkout.jsx';
 import OrderConfirmation from './pages/OrderConfirmation.jsx';
+import AdminProducts from './pages/AdminProducts.jsx';
 
 function Nav() {
   const { cartItems } = useCart();
@@ -15,6 +16,8 @@ function Nav() {
       <Link to="/">Produkter</Link>
       {' | '}
       <Link to="/varukorg">Varukorg ({itemCount})</Link>
+      {' | '}
+      <Link to="/admin/produkter">Admin: Produkter</Link>
     </nav>
   );
 }
@@ -29,6 +32,7 @@ function App() {
           <Route path="/varukorg" element={<Cart />} />
           <Route path="/kassa" element={<Checkout />} />
           <Route path="/orderbekraftelse" element={<OrderConfirmation />} />
+          <Route path="/admin/produkter" element={<AdminProducts />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>

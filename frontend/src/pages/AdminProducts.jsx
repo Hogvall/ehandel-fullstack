@@ -1,0 +1,149 @@
+import { useState, useEffect } from 'react';
+
+const EMPTY_FORM = { name: '', description: '', price: '', stock: '', image_url: '' };
+
+function AdminProducts() {
+  const [products, setProducts] = useState([]);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  function loadProducts() {
+    fetch('http://localhost:3000/api/products')
+      .then((res) => res.json())
+      .then(setProducts)
+      .catch((err) => setError(err.message));
+  }
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError(null);
+
+    const url = editingId
+      ? `http://localhost:3000/api/products/${editingId}`
+      : 'http://localhost:3000/api/products';
+    const method = editingId ? 'PUT' : 'POST';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          price: Number(form.price),
+          stock: Number(form.stock),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Något gick fel');
+      }
+
+      setForm(EMPTY_FORM);
+      setEditingId(null);
+      loadProducts();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  function startEdit(product) {
+    setEditingId(product.id);
+    setForm({
+      name: product.name,
+      description: product.description || '',
+      price: product.price,
+      stock: product.stock,
+      image_url: product.image_url || '',
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+  }
+
+  async function handleDelete(id) {
+    if (!confirm('Ta bort produkten?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/products/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Kunde inte ta bort produkten');
+      }
+
+      loadProducts();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <div>
+      <h1>Admin – Produkter</h1>
+
+      {error && <p style={{ color: 'red' }}>Fel: {error}</p>}
+
+      <h2>{editingId ? 'Redigera produkt' : 'Ny produkt'}</h2>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label>Namn: <input name="name" value={form.name} onChange={handleChange} required /></label>
+        </div>
+        <div>
+          <label>Beskrivning: <input name="description" value={form.description} onChange={handleChange} /></label>
+        </div>
+        <div>
+          <label>Pris (kr): <input name="price" type="number" step="0.01" value={form.price} onChange={handleChange} required /></label>
+        </div>
+        <div>
+          <label>Lager: <input name="stock" type="number" value={form.stock} onChange={handleChange} required /></label>
+        </div>
+        <div>
+          <label>Bild-URL: <input name="image_url" value={form.image_url} onChange={handleChange} /></label>
+        </div>
+        <button type="submit">{editingId ? 'Spara ändringar' : 'Lägg till produkt'}</button>
+        {editingId && <button type="button" onClick={cancelEdit}>Avbryt</button>}
+      </form>
+
+      <h2>Alla produkter</h2>
+      <table border="1" cellPadding="6">
+        <thead>
+          <tr>
+            <th>Namn</th>
+            <th>Pris</th>
+            <th>Lager</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((product) => (
+            <tr key={product.id}>
+              <td>{product.name}</td>
+              <td>{product.price} kr</td>
+              <td>{product.stock}</td>
+              <td>
+                <button onClick={() => startEdit(product)}>Redigera</button>
+                <button onClick={() => handleDelete(product.id)}>Ta bort</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default AdminProducts;

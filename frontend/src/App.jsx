@@ -3,6 +3,8 @@ import { CartProvider, useCart } from './context/CartContext.jsx';
 import ProductList from './pages/ProductList.jsx';
 import Cart from './pages/Cart.jsx';
 import './App.css';
+import Checkout from './pages/Checkout.jsx';
+import OrderConfirmation from './pages/OrderConfirmation.jsx';
 
 function Nav() {
   const { cartItems } = useCart();
@@ -25,6 +27,8 @@ function App() {
         <Routes>
           <Route path="/" element={<ProductList />} />
           <Route path="/varukorg" element={<Cart />} />
+          <Route path="/kassa" element={<Checkout />} />
+          <Route path="/orderbekraftelse" element={<OrderConfirmation />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>

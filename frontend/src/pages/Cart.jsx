@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 
 function Cart() {
@@ -37,6 +38,7 @@ function Cart() {
         ))}
       </ul>
       <p><strong>Totalt: {total.toFixed(2)} kr</strong></p>
+      <p><Link to="/kassa">Gå till kassan</Link></p>
     </div>
   );
 }

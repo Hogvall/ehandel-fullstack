@@ -55,5 +55,16 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Se över för Admin senare.
+router.get('/', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT orders.*, users.name AS customer_name FROM orders JOIN users ON orders.user_id = users.id ORDER BY created_at DESC'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Kunde inte hämta ordrar' });
+  }
+});
+
 export default router;

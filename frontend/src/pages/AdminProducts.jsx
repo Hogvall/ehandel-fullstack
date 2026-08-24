@@ -13,7 +13,7 @@ function AdminProducts() {
   }, []);
 
   function loadProducts() {
-    fetch('http://localhost:3000/api/products')
+       fetch(`${API_URL}/api/products`)
       .then((res) => res.json())
       .then(setProducts)
       .catch((err) => setError(err.message));
@@ -28,8 +28,8 @@ function AdminProducts() {
     setError(null);
 
     const url = editingId
-      ? `http://localhost:3000/api/products/${editingId}`
-      : 'http://localhost:3000/api/products';
+     ? `${API_URL}/api/products/${editingId}`
+     : `${API_URL}/api/products`;
     const method = editingId ? 'PUT' : 'POST';
 
     try {
@@ -76,7 +76,7 @@ function AdminProducts() {
     if (!confirm('Ta bort produkten?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/products/${id}`, {
+        const response = await fetch(`${API_URL}/api/products/${id}`, {
         method: 'DELETE',
       });
 

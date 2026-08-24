@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import { API_URL } from '../config.js';
 
 function ProductList() {
   const [products, setProducts] = useState([]);
@@ -9,7 +10,7 @@ function ProductList() {
 
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/products')
+    fetch(`${API_URL}/api/products`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Nätverksfel: ' + response.status);

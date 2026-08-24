@@ -11,7 +11,7 @@ function AdminOrders() {
   }, []);
 
   function loadOrders() {
-    fetch('http://localhost:3000/api/orders')
+    fetch(`${API_URL}/api/orders`)
       .then((res) => res.json())
       .then(setOrders)
       .catch((err) => setError(err.message));
@@ -19,7 +19,7 @@ function AdminOrders() {
 
   async function handleStatusChange(orderId, newStatus) {
     try {
-      const response = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+     const response = await fetch(`${API_URL}/api/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),

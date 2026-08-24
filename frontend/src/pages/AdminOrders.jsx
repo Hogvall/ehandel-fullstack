@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URL } from '../config.js';
 
 const STATUSES = ['Beställd', 'Behandlas', 'Levererad', 'Återbetald'];
 

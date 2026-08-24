@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URL } from '../config.js';
 
 const EMPTY_FORM = { name: '', description: '', price: '', stock: '', image_url: '' };
 

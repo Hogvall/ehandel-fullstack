@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
+import { API_URL } from '../config.js';
 
 function Checkout() {
   const { cartItems, clearCart } = useCart();

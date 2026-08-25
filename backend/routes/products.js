@@ -1,5 +1,6 @@
 import express from 'express';
 import pool from '../db.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   const { name, description, price, stock, image_url } = req.body;
 
   if (!name || price === undefined) {
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   const { name, description, price, stock, image_url } = req.body;
 
   try {
@@ -68,7 +69,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const [result] = await pool.query('DELETE FROM products WHERE id = ?', [req.params.id]);
 

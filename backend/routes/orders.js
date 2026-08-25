@@ -1,5 +1,6 @@
 import express from 'express';
 import pool from '../db.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -55,7 +56,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT orders.*, users.name AS customer_name FROM orders JOIN users ON orders.user_id = users.id ORDER BY created_at DESC'
@@ -67,7 +68,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   const { status } = req.body;
   const validStatuses = ['Beställd', 'Behandlas', 'Levererad', 'Återbetald'];
 

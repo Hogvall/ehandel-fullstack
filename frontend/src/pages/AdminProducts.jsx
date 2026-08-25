@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_URL } from '../config.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const EMPTY_FORM = { name: '', description: '', price: '', stock: '', image_url: '' };
 
@@ -8,6 +9,7 @@ function AdminProducts() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(null);
+  const { token } = useAuth();
 
   useEffect(() => {
     loadProducts();
@@ -36,7 +38,7 @@ function AdminProducts() {
     try {
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           ...form,
           price: Number(form.price),
@@ -79,6 +81,7 @@ function AdminProducts() {
     try {
         const response = await fetch(`${API_URL}/api/products/${id}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {

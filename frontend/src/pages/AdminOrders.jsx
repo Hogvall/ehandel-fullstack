@@ -11,9 +11,14 @@ function AdminOrders() {
     loadOrders();
   }, []);
 
-  function loadOrders() {
+function loadOrders() {
     fetch(`${API_URL}/api/orders`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((data) => { throw new Error(data.error || 'Ett fel uppstod'); });
+        }
+        return res.json();
+      })
       .then(setOrders)
       .catch((err) => setError(err.message));
   }

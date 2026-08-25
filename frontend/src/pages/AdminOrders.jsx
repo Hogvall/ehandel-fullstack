@@ -41,9 +41,9 @@ function AdminOrders() {
     <div>
       <h1>Admin – Ordrar</h1>
 
-      {error && <p style={{ color: 'red' }}>Fel: {error}</p>}
+      {error && <p className="error-text">Fel: {error}</p>}
 
-      <table border="1" cellPadding="6">
+      <table className="data-table">
         <thead>
           <tr>
             <th>Order-id</th>

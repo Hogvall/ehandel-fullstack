@@ -13,14 +13,14 @@ function Nav() {
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <nav>
-      <Link to="/">Produkter</Link>
-      {' | '}
-      <Link to="/varukorg">Varukorg ({itemCount})</Link>
-      {' | '}
-      <Link to="/admin/produkter">Admin: Produkter</Link>
-      {' | '}
-      <Link to="/admin/ordrar">Admin: Ordrar</Link>
+    <nav className="nav">
+      <Link to="/" className="nav-brand">E-handel</Link>
+      <div className="nav-links">
+        <Link to="/">Produkter</Link>
+        <Link to="/varukorg">Varukorg <span className="nav-cart-count">{itemCount}</span></Link>
+        <Link to="/admin/produkter">Admin: Produkter</Link>
+        <Link to="/admin/ordrar">Admin: Ordrar</Link>
+      </div>
     </nav>
   );
 }
@@ -30,14 +30,16 @@ function App() {
     <CartProvider>
       <BrowserRouter>
         <Nav />
-        <Routes>
-          <Route path="/" element={<ProductList />} />
-          <Route path="/varukorg" element={<Cart />} />
-          <Route path="/kassa" element={<Checkout />} />
-          <Route path="/orderbekraftelse" element={<OrderConfirmation />} />
-          <Route path="/admin/produkter" element={<AdminProducts />} />
-          <Route path="/admin/ordrar" element={<AdminOrders />} />
-        </Routes>
+        <div className="app-shell">
+          <Routes>
+            <Route path="/" element={<ProductList />} />
+            <Route path="/varukorg" element={<Cart />} />
+            <Route path="/kassa" element={<Checkout />} />
+            <Route path="/orderbekraftelse" element={<OrderConfirmation />} />
+            <Route path="/admin/produkter" element={<AdminProducts />} />
+            <Route path="/admin/ordrar" element={<AdminOrders />} />
+          </Routes>
+        </div>
       </BrowserRouter>
     </CartProvider>
   );

@@ -34,19 +34,21 @@ function ProductList() {
     <div>
       <h1>Våra produkter</h1>
       {products.length === 0 ? (
-        <p>Inga produkter hittades.</p>
+        <p className="empty-state">Inga produkter hittades.</p>
       ) : (
-        <ul>
+        <div className="product-grid">
           {products.map((product) => (
-            <li key={product.id}>
-              <strong>{product.name}</strong> – {product.price} kr
-              <br />
-              {product.description}
-              <br />
-              <button onClick={() => addToCart(product)}>Lägg i varukorg</button>
-            </li>
+            <div className="product-card" key={product.id}>
+              <img src={product.image_url || 'https://picsum.photos/seed/' + product.id + '/400/300'} alt={product.name} />
+              <div className="product-card-body">
+                <span className="product-name">{product.name}</span>
+                <span className="product-desc">{product.description}</span>
+                <span className="product-price">{product.price} kr</span>
+                <button className="btn" onClick={() => addToCart(product)}>Lägg i varukorg</button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

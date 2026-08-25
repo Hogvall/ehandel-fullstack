@@ -14,11 +14,11 @@ function OrderConfirmation() {
   }
 
   return (
-    <div>
-      <h1>Tack för din beställning!</h1>
+    <div className="confirmation">
+      <h1>Tack för din beställning</h1>
       <p>Ordernummer: {orderId}</p>
-      <p>Totalsumma: {total.toFixed(2)} kr</p>
-      <Link to="/">Fortsätt handla</Link>
+      <p className="total-line">{total.toFixed(2)} kr</p>
+      <Link to="/" className="btn">Fortsätt handla</Link>
     </div>
   );
 }

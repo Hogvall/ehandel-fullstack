@@ -13,7 +13,7 @@ function Cart() {
     return (
       <div>
         <h1>Varukorg</h1>
-        <p>Din varukorg är tom.</p>
+        <p className="empty-state">Din varukorg är tom.</p>
       </div>
     );
   }
@@ -21,24 +21,33 @@ function Cart() {
   return (
     <div>
       <h1>Varukorg</h1>
-      <ul>
+      <ul className="cart-list">
         {cartItems.map((item) => (
-          <li key={item.id}>
-            <strong>{item.name}</strong> – {item.price} kr st
-            <br />
-            Antal:{' '}
-            <input
-              type="number"
-              min="1"
-              value={item.quantity}
-              onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
-            />
-            <button onClick={() => removeFromCart(item.id)}>Ta bort</button>
-          </li>
+<li className="cart-item" key={item.id}>
+  <div className="cart-item-main">
+    <img
+      className="cart-item-thumb"
+      src={item.image_url || 'https://picsum.photos/seed/' + item.id + '/100/100'}
+      alt={item.name}
+    />
+    <div>
+      <strong>{item.name}</strong> – {item.price} kr st
+    </div>
+  </div>
+  <div>
+    <input
+      type="number"
+      min="1"
+      value={item.quantity}
+      onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
+    />
+    <button className="btn btn-danger btn-small" onClick={() => removeFromCart(item.id)}>Ta bort</button>
+  </div>
+</li>
         ))}
       </ul>
-      <p><strong>Totalt: {total.toFixed(2)} kr</strong></p>
-      <p><Link to="/kassa">Gå till kassan</Link></p>
+      <p className="total-line">Totalt: {total.toFixed(2)} kr</p>
+      <Link to="/kassa" className="btn">Gå till kassan</Link>
     </div>
   );
 }

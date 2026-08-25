@@ -96,31 +96,31 @@ function AdminProducts() {
     <div>
       <h1>Admin – Produkter</h1>
 
-      {error && <p style={{ color: 'red' }}>Fel: {error}</p>}
+      {error && <p className="error-text">Fel: {error}</p>}
 
       <h2>{editingId ? 'Redigera produkt' : 'Ny produkt'}</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Namn: <input name="name" value={form.name} onChange={handleChange} required /></label>
-        </div>
-        <div>
-          <label>Beskrivning: <input name="description" value={form.description} onChange={handleChange} /></label>
-        </div>
-        <div>
-          <label>Pris (kr): <input name="price" type="number" step="0.01" value={form.price} onChange={handleChange} required /></label>
-        </div>
-        <div>
-          <label>Lager: <input name="stock" type="number" value={form.stock} onChange={handleChange} required /></label>
-        </div>
-        <div>
-          <label>Bild-URL: <input name="image_url" value={form.image_url} onChange={handleChange} /></label>
-        </div>
-        <button type="submit">{editingId ? 'Spara ändringar' : 'Lägg till produkt'}</button>
-        {editingId && <button type="button" onClick={cancelEdit}>Avbryt</button>}
+      <form className="form-card" onSubmit={handleSubmit}>
+        <label>Namn
+          <input name="name" value={form.name} onChange={handleChange} required />
+        </label>
+        <label>Beskrivning
+          <input name="description" value={form.description} onChange={handleChange} />
+        </label>
+        <label>Pris (kr)
+          <input name="price" type="number" step="0.01" value={form.price} onChange={handleChange} required />
+        </label>
+        <label>Lager
+          <input name="stock" type="number" value={form.stock} onChange={handleChange} required />
+        </label>
+        <label>Bild-URL
+          <input name="image_url" value={form.image_url} onChange={handleChange} />
+        </label>
+        <button type="submit" className="btn">{editingId ? 'Spara ändringar' : 'Lägg till produkt'}</button>
+        {editingId && <button type="button" className="btn btn-secondary" onClick={cancelEdit}>Avbryt</button>}
       </form>
 
       <h2>Alla produkter</h2>
-      <table border="1" cellPadding="6">
+      <table className="data-table">
         <thead>
           <tr>
             <th>Namn</th>
@@ -136,8 +136,9 @@ function AdminProducts() {
               <td>{product.price} kr</td>
               <td>{product.stock}</td>
               <td>
-                <button onClick={() => startEdit(product)}>Redigera</button>
-                <button onClick={() => handleDelete(product.id)}>Ta bort</button>
+                <button className="btn btn-secondary btn-small" onClick={() => startEdit(product)}>Redigera</button>
+                {' '}
+                <button className="btn btn-danger btn-small" onClick={() => handleDelete(product.id)}>Ta bort</button>
               </td>
             </tr>
           ))}

@@ -40,7 +40,7 @@ function Checkout() {
     return (
       <div>
         <h1>Kassa</h1>
-        <p>Din varukorg är tom.</p>
+        <p className="empty-state">Din varukorg är tom.</p>
       </div>
     );
   }
@@ -48,19 +48,27 @@ function Checkout() {
   return (
     <div>
       <h1>Kassa</h1>
-      <ul>
+      <ul className="checkout-list">
         {cartItems.map((item) => (
-          <li key={item.id}>
-            {item.name} × {item.quantity} = {(item.price * item.quantity).toFixed(2)} kr
-          </li>
+          <li className="cart-item" key={item.id}>
+  <div className="cart-item-main">
+    <img
+      className="cart-item-thumb"
+      src={item.image_url || 'https://picsum.photos/seed/' + item.id + '/100/100'}
+      alt={item.name}
+    />
+    <span>{item.name} × {item.quantity}</span>
+  </div>
+  <span>{(item.price * item.quantity).toFixed(2)} kr</span>
+</li>
         ))}
       </ul>
-      <p><strong>Totalt: {total.toFixed(2)} kr</strong></p>
+      <p className="total-line">Totalt: {total.toFixed(2)} kr</p>
 
-      {error && <p style={{ color: 'red' }}>Fel: {error}</p>}
+      {error && <p className="error-text">Fel: {error}</p>}
 
-      <button onClick={handleConfirm} disabled={submitting}>
-        {submitting ? 'Bearbetar...' : 'Betala (simulerad betalning)'}
+      <button className="btn" onClick={handleConfirm} disabled={submitting}>
+        {submitting ? 'Bearbetar...' : 'Betala'}
       </button>
     </div>
   );

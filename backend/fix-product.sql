@@ -1,0 +1,1 @@
+UPDATE products SET description = 'En skön bomullst-shirt' WHERE name = 'T-shirt';

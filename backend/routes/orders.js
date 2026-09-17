@@ -4,15 +4,15 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// OBS!!!! hårdkodat. ersätt med inloggad användares id när inloggningen är byggd.
-const TEMP_USER_ID = 1;
-
-
-router.post('/', async (req, res) => {
-  const { items } = req.body; 
+router.post('/', authenticateToken, async (req, res) => {
+  const { items, delivery } = req.body;
 
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'Varukorgen är tom' });
+  }
+
+  if (!delivery || !delivery.name || !delivery.email || !delivery.address || !delivery.postalCode || !delivery.city) {
+    return res.status(400).json({ error: 'Alla leveransuppgifter krävs' });
   }
 
   const connection = await pool.getConnection();
@@ -23,8 +23,10 @@ router.post('/', async (req, res) => {
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     const [orderResult] = await connection.query(
-      'INSERT INTO orders (user_id, status, total) VALUES (?, ?, ?)',
-      [TEMP_USER_ID, 'Beställd', total]
+      `INSERT INTO orders
+        (user_id, status, total, delivery_name, delivery_email, delivery_address, delivery_postal_code, delivery_city)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.user.id, 'Beställd', total, delivery.name, delivery.email, delivery.address, delivery.postalCode, delivery.city]
     );
 
     const orderId = orderResult.insertId;

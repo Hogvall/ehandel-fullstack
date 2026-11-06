@@ -3,6 +3,7 @@ import { z } from 'zod';
 import pool from '../db.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getSupplierCatalog } from '../integrations/supplierAdapter.js';
+import { rebuildSearchIndex, syncProductsToSearch } from '../services/searchSync.js';
 
 const router = express.Router();
 
@@ -48,7 +49,8 @@ router.post('/products/import/:format', authenticateToken, requireAdmin, async (
   const [categoryRows] = await pool.query('SELECT id, name FROM categories');
   const categoryIdsByName = new Map(categoryRows.map((row) => [row.name, row.id]));
 
-  const report = { format, total: candidates.length, created: 0, updated: 0, skipped: [] };
+  const report = { format, total: candidates.length, created: 0, updated: 0, skipped: [], searchIndexed: false };
+  const savedProductIds = [];
 
   for (const candidate of candidates) {
     const result = ImportedProduct.safeParse(candidate);
@@ -83,6 +85,8 @@ router.post('/products/import/:format', authenticateToken, requireAdmin, async (
         categoryId,
       ]);
 
+      savedProductIds.push(productId);
+
       if (existingId) {
         report.updated += 1;
       } else {
@@ -95,7 +99,14 @@ router.post('/products/import/:format', authenticateToken, requireAdmin, async (
     }
   }
 
+  report.searchIndexed = await syncProductsToSearch(savedProductIds);
+
   res.json(report);
+});
+
+router.post('/search/reindex', authenticateToken, requireAdmin, async (req, res) => {
+  const searchIndexed = await rebuildSearchIndex();
+  res.json({ searchIndexed });
 });
 
 export default router;

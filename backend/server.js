@@ -5,6 +5,7 @@ import pool from './db.js';
 import productsRouter from './routes/products.js';
 import ordersRouter from './routes/orders.js';
 import authRouter from './routes/auth.js';
+import adminRouter from './routes/admin.js';
 import { ExternalServiceError } from './utils/fetchWithTimeout.js';
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/api/products', productsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Servern är igång!' });

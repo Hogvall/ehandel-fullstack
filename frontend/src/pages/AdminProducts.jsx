@@ -9,6 +9,8 @@ function AdminProducts() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(null);
+  const [importing, setImporting] = useState(null);
+  const [importReport, setImportReport] = useState(null);
   const { token } = useAuth();
 
   useEffect(() => {
@@ -16,10 +18,36 @@ function AdminProducts() {
   }, []);
 
   function loadProducts() {
-       fetch(`${API_URL}/api/products`)
+    fetch(`${API_URL}/api/products`)
       .then((res) => res.json())
       .then(setProducts)
       .catch((err) => setError(err.message));
+  }
+
+  async function handleImport(format) {
+    setError(null);
+    setImportReport(null);
+    setImporting(format);
+
+    try {
+      const response = await fetch(`${API_URL}/api/admin/products/import/${format}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Importen misslyckades');
+      }
+
+      setImportReport(data);
+      loadProducts();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setImporting(null);
+    }
   }
 
   function handleChange(e) {
@@ -30,9 +58,7 @@ function AdminProducts() {
     e.preventDefault();
     setError(null);
 
-    const url = editingId
-     ? `${API_URL}/api/products/${editingId}`
-     : `${API_URL}/api/products`;
+    const url = editingId ? `${API_URL}/api/products/${editingId}` : `${API_URL}/api/products`;
     const method = editingId ? 'PUT' : 'POST';
 
     try {
@@ -79,7 +105,7 @@ function AdminProducts() {
     if (!confirm('Ta bort produkten?')) return;
 
     try {
-        const response = await fetch(`${API_URL}/api/products/${id}`, {
+      const response = await fetch(`${API_URL}/api/products/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -100,6 +126,49 @@ function AdminProducts() {
       <h1>Admin – Produkter</h1>
 
       {error && <p className="error-text">Fel: {error}</p>}
+
+      <h2>Importera från leverantör</h2>
+      <div className="form-card">
+        <button className="btn" onClick={() => handleImport('csv')} disabled={importing !== null}>
+          {importing === 'csv' ? 'Importerar...' : 'Importera CSV'}
+        </button>
+        {' '}
+        <button className="btn" onClick={() => handleImport('xml')} disabled={importing !== null}>
+          {importing === 'xml' ? 'Importerar...' : 'Importera XML'}
+        </button>
+
+        {importReport && (
+          <div>
+            <p>
+              Import från {importReport.format.toUpperCase()}: {importReport.total} produkter i filen
+            </p>
+            <ul>
+              <li>Nya: {importReport.created}</li>
+              <li>Uppdaterade: {importReport.updated}</li>
+              <li>Överhoppade: {importReport.skipped.length}</li>
+            </ul>
+
+            {importReport.skipped.length > 0 && (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Artikelnummer</th>
+                    <th>Orsak</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importReport.skipped.map((item) => (
+                    <tr key={item.sku}>
+                      <td>{item.sku}</td>
+                      <td>{item.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
 
       <h2>{editingId ? 'Redigera produkt' : 'Ny produkt'}</h2>
       <form className="form-card" onSubmit={handleSubmit}>
@@ -126,6 +195,7 @@ function AdminProducts() {
       <table className="data-table">
         <thead>
           <tr>
+            <th>Artikelnr</th>
             <th>Namn</th>
             <th>Pris</th>
             <th>Lager</th>
@@ -135,6 +205,7 @@ function AdminProducts() {
         <tbody>
           {products.map((product) => (
             <tr key={product.id}>
+              <td>{product.sku || '–'}</td>
               <td>{product.name}</td>
               <td>{product.price} kr</td>
               <td>{product.stock}</td>

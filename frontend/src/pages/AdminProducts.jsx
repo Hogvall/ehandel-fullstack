@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react';
 import { API_URL } from '../config.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const EMPTY_FORM = { name: '', description: '', price: '', stock: '', image_url: '' };
+const EMPTY_FORM = { sku: '', name: '', description: '', price: '', stock: '', image_url: '' };
+const SEARCH_WARNING = 'Produkten sparades, men sökindexet kunde inte uppdateras. Klicka på "Bygg om sökindex" senare.';
 
 function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [importing, setImporting] = useState(null);
   const [importReport, setImportReport] = useState(null);
+  const [reindexing, setReindexing] = useState(false);
   const { token } = useAuth();
 
   useEffect(() => {
@@ -24,8 +27,13 @@ function AdminProducts() {
       .catch((err) => setError(err.message));
   }
 
-  async function handleImport(format) {
+  function clearMessages() {
     setError(null);
+    setNotice(null);
+  }
+
+  async function handleImport(format) {
+    clearMessages();
     setImportReport(null);
     setImporting(format);
 
@@ -42,11 +50,42 @@ function AdminProducts() {
       }
 
       setImportReport(data);
+      if (!data.searchIndexed) {
+        setNotice('Produkterna sparades, men sökindexet kunde inte uppdateras. Klicka på "Bygg om sökindex" senare.');
+      }
       loadProducts();
     } catch (err) {
       setError(err.message);
     } finally {
       setImporting(null);
+    }
+  }
+
+  async function handleReindex() {
+    clearMessages();
+    setReindexing(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/admin/search/reindex`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Kunde inte bygga om sökindexet');
+      }
+
+      if (data.searchIndexed) {
+        setNotice('Sökindexet är ombyggt och speglar databasen.');
+      } else {
+        setError('Sökindexet kunde inte byggas om. Sökningen är troligen inte tillgänglig just nu.');
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setReindexing(false);
     }
   }
 
@@ -56,7 +95,7 @@ function AdminProducts() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError(null);
+    clearMessages();
 
     const url = editingId ? `${API_URL}/api/products/${editingId}` : `${API_URL}/api/products`;
     const method = editingId ? 'PUT' : 'POST';
@@ -72,9 +111,14 @@ function AdminProducts() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Något gick fel');
+      }
+
+      if (data.searchIndexed === false) {
+        setNotice(SEARCH_WARNING);
       }
 
       setForm(EMPTY_FORM);
@@ -86,8 +130,10 @@ function AdminProducts() {
   }
 
   function startEdit(product) {
+    clearMessages();
     setEditingId(product.id);
     setForm({
+      sku: product.sku || '',
       name: product.name,
       description: product.description || '',
       price: product.price,
@@ -103,6 +149,7 @@ function AdminProducts() {
 
   async function handleDelete(id) {
     if (!confirm('Ta bort produkten?')) return;
+    clearMessages();
 
     try {
       const response = await fetch(`${API_URL}/api/products/${id}`, {
@@ -110,9 +157,14 @@ function AdminProducts() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Kunde inte ta bort produkten');
+      }
+
+      if (data.searchIndexed === false) {
+        setNotice('Produkten togs bort, men finns kvar i sökningen. Klicka på "Bygg om sökindex" senare.');
       }
 
       loadProducts();
@@ -126,15 +178,20 @@ function AdminProducts() {
       <h1>Admin – Produkter</h1>
 
       {error && <p className="error-text">Fel: {error}</p>}
+      {notice && <p className="notice-text">{notice}</p>}
 
       <h2>Importera från leverantör</h2>
       <div className="form-card">
-        <button className="btn" onClick={() => handleImport('csv')} disabled={importing !== null}>
+        <button className="btn" onClick={() => handleImport('csv')} disabled={importing !== null || reindexing}>
           {importing === 'csv' ? 'Importerar...' : 'Importera CSV'}
         </button>
         {' '}
-        <button className="btn" onClick={() => handleImport('xml')} disabled={importing !== null}>
+        <button className="btn" onClick={() => handleImport('xml')} disabled={importing !== null || reindexing}>
           {importing === 'xml' ? 'Importerar...' : 'Importera XML'}
+        </button>
+        {' '}
+        <button className="btn btn-secondary" onClick={handleReindex} disabled={importing !== null || reindexing}>
+          {reindexing ? 'Bygger om...' : 'Bygg om sökindex'}
         </button>
 
         {importReport && (
@@ -146,6 +203,7 @@ function AdminProducts() {
               <li>Nya: {importReport.created}</li>
               <li>Uppdaterade: {importReport.updated}</li>
               <li>Överhoppade: {importReport.skipped.length}</li>
+              <li>Sökindex uppdaterat: {importReport.searchIndexed ? 'Ja' : 'Nej'}</li>
             </ul>
 
             {importReport.skipped.length > 0 && (
@@ -172,6 +230,9 @@ function AdminProducts() {
 
       <h2>{editingId ? 'Redigera produkt' : 'Ny produkt'}</h2>
       <form className="form-card" onSubmit={handleSubmit}>
+        <label>Artikelnummer
+          <input name="sku" value={form.sku} onChange={handleChange} required disabled={editingId !== null} />
+        </label>
         <label>Namn
           <input name="name" value={form.name} onChange={handleChange} required />
         </label>

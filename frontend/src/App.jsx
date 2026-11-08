@@ -53,7 +53,7 @@ function App() {
               <Route path="/" element={<ProductList />} />
               <Route path="/varukorg" element={<Cart />} />
               <Route path="/kassa" element={<Checkout />} />
-              <Route path="/orderbekraftelse" element={<OrderConfirmation />} />
+              <Route path="/orderbekraftelse/:orderId" element={<OrderConfirmation />} />
               <Route path="/admin/produkter" element={<AdminProducts />} />
               <Route path="/admin/ordrar" element={<AdminOrders />} />
               <Route path="/logga-in" element={<Login />} />

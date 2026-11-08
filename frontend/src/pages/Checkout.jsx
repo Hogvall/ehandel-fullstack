@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { API_URL } from '../config.js';
 
 function Checkout() {
-  const { cartItems, clearCart } = useCart();
+  const { cartItems } = useCart();
   const { user, token } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
 
   const [delivery, setDelivery] = useState({
     name: user?.name || '',
@@ -19,7 +18,7 @@ function Checkout() {
     city: '',
   });
 
-  const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const estimatedTotal = cartItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
 
   function handleChange(e) {
     setDelivery({ ...delivery, [e.target.name]: e.target.value });
@@ -37,21 +36,34 @@ function Checkout() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ items: cartItems, delivery }),
+        body: JSON.stringify({
+          items: cartItems.map((item) => ({ productId: item.id, quantity: item.quantity })),
+          delivery,
+        }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Något gick fel');
       }
 
-      const data = await response.json();
-      clearCart();
-      navigate('/orderbekraftelse', { state: { orderId: data.orderId, total: data.total } });
+      window.location.assign(data.checkoutUrl);
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
     }
+  }
+
+  if (!user) {
+    return (
+      <div>
+        <h1>Kassa</h1>
+        <p className="empty-state">
+          Du behöver <Link to="/logga-in">logga in</Link> för att handla.
+        </p>
+      </div>
+    );
   }
 
   if (cartItems.length === 0) {
@@ -77,11 +89,11 @@ function Checkout() {
               />
               <span>{item.name} × {item.quantity}</span>
             </div>
-            <span>{(item.price * item.quantity).toFixed(2)} kr</span>
+            <span>{(Number(item.price) * item.quantity).toFixed(2)} kr</span>
           </li>
         ))}
       </ul>
-      <p className="total-line">Totalt: {total.toFixed(2)} kr</p>
+      <p className="total-line">Totalt: {estimatedTotal.toFixed(2)} kr</p>
 
       <form className="form-card" onSubmit={handleConfirm}>
         <label>Namn
@@ -103,7 +115,7 @@ function Checkout() {
         {error && <p className="error-text">Fel: {error}</p>}
 
         <button type="submit" className="btn" disabled={submitting}>
-          {submitting ? 'Bearbetar...' : 'Betala'}
+          {submitting ? 'Skickar till betalning...' : 'Gå till betalning'}
         </button>
       </form>
     </div>

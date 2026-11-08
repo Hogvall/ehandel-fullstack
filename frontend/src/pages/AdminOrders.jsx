@@ -57,6 +57,7 @@ function loadOrders() {
             <th>Order-id</th>
             <th>Kund</th>
             <th>Totalsumma</th>
+            <th>Betalning</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -66,6 +67,7 @@ function loadOrders() {
               <td>{order.id}</td>
               <td>{order.customer_name}</td>
               <td>{order.total} kr</td>
+              <td>{order.payment_status}</td>
               <td>
                 <select
                   value={order.status}

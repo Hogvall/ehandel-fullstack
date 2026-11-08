@@ -7,12 +7,14 @@ import ordersRouter from './routes/orders.js';
 import authRouter from './routes/auth.js';
 import adminRouter from './routes/admin.js';
 import searchRouter from './routes/search.js';
+import webhooksRouter from './routes/webhooks.js';
 import { ExternalServiceError } from './utils/fetchWithTimeout.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.use('/api/webhooks', webhooksRouter);
 app.use(express.json());
 app.use('/api/products', productsRouter);
 app.use('/api/orders', ordersRouter);

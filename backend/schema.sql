@@ -38,12 +38,15 @@ CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     status ENUM('Beställd', 'Behandlas', 'Levererad', 'Återbetald') NOT NULL DEFAULT 'Beställd',
+    payment_status ENUM('Obetald', 'Betald', 'Avbruten') NOT NULL DEFAULT 'Obetald',
     total DECIMAL(10,2) NOT NULL,
     delivery_name VARCHAR(100) NOT NULL,
     delivery_email VARCHAR(150) NOT NULL,
     delivery_address VARCHAR(255) NOT NULL,
     delivery_postal_code VARCHAR(10) NOT NULL,
     delivery_city VARCHAR(100) NOT NULL,
+    stripe_session_id VARCHAR(255),
+    paid_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );

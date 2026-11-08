@@ -8,6 +8,7 @@ import authRouter from './routes/auth.js';
 import adminRouter from './routes/admin.js';
 import searchRouter from './routes/search.js';
 import webhooksRouter from './routes/webhooks.js';
+import productImagesRouter from './routes/productImages.js';
 import { ExternalServiceError } from './utils/fetchWithTimeout.js';
 
 const app = express();
@@ -20,6 +21,7 @@ app.use('/api/products', productsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin', productImagesRouter);
 app.use('/api/search', searchRouter);
 
 app.get('/', (req, res) => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { API_URL } from '../config.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const EMPTY_FORM = { sku: '', name: '', description: '', price: '', stock: '', image_url: '' };
+const EMPTY_FORM = { sku: '', name: '', description: '', price: '', stock: '' };
 const SEARCH_WARNING = 'Produkten sparades, men sökindexet kunde inte uppdateras. Klicka på "Bygg om sökindex" senare.';
 
 function AdminProducts() {
@@ -14,6 +14,7 @@ function AdminProducts() {
   const [importing, setImporting] = useState(null);
   const [importReport, setImportReport] = useState(null);
   const [reindexing, setReindexing] = useState(false);
+  const [uploadingId, setUploadingId] = useState(null);
   const { token } = useAuth();
 
   useEffect(() => {
@@ -89,6 +90,41 @@ function AdminProducts() {
     }
   }
 
+  async function handleImageUpload(productId, file) {
+    if (!file) return;
+    clearMessages();
+    setUploadingId(productId);
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch(`${API_URL}/api/admin/products/${productId}/image`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Bilden kunde inte laddas upp');
+      }
+
+      if (data.searchIndexed === false) {
+        setNotice('Bilden sparades, men sökindexet kunde inte uppdateras. Klicka på "Bygg om sökindex" senare.');
+      } else {
+        setNotice('Bilden är uppladdad.');
+      }
+
+      loadProducts();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
@@ -138,7 +174,6 @@ function AdminProducts() {
       description: product.description || '',
       price: product.price,
       stock: product.stock,
-      image_url: product.image_url || '',
     });
   }
 
@@ -245,9 +280,6 @@ function AdminProducts() {
         <label>Lager
           <input name="stock" type="number" value={form.stock} onChange={handleChange} required />
         </label>
-        <label>Bild-URL
-          <input name="image_url" value={form.image_url} onChange={handleChange} />
-        </label>
         <button type="submit" className="btn">{editingId ? 'Spara ändringar' : 'Lägg till produkt'}</button>
         {editingId && <button type="button" className="btn btn-secondary" onClick={cancelEdit}>Avbryt</button>}
       </form>
@@ -256,6 +288,7 @@ function AdminProducts() {
       <table className="data-table">
         <thead>
           <tr>
+            <th>Bild</th>
             <th>Artikelnr</th>
             <th>Namn</th>
             <th>Pris</th>
@@ -266,6 +299,26 @@ function AdminProducts() {
         <tbody>
           {products.map((product) => (
             <tr key={product.id}>
+              <td>
+                {product.image_url ? (
+                  <img className="admin-thumb" src={product.image_url} alt={product.name} />
+                ) : (
+                  <span className="search-meta">Ingen bild</span>
+                )}
+                <label className="btn btn-secondary btn-small upload-button">
+                  {uploadingId === product.id ? 'Laddar upp...' : product.image_url ? 'Byt bild' : 'Ladda upp'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    hidden
+                    disabled={uploadingId !== null}
+                    onChange={(e) => {
+                      handleImageUpload(product.id, e.target.files[0]);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </td>
               <td>{product.sku || '–'}</td>
               <td>{product.name}</td>
               <td>{product.price} kr</td>

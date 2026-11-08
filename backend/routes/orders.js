@@ -3,25 +3,17 @@ import { z } from 'zod';
 import pool from '../db.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { createCheckoutSession } from '../integrations/paymentAdapter.js';
+import { findServicePoints } from '../integrations/shippingAdapter.js';
+import { CartItems, CartError, priceCart } from '../services/cart.js';
+import { SHIPPING_METHODS, shippingPriceInOre } from '../services/shippingPrices.js';
+import { ExternalServiceError } from '../utils/fetchWithTimeout.js';
 
 const router = express.Router();
 
 const FULFILLMENT_STATUSES = ['Beställd', 'Behandlas', 'Levererad', 'Återbetald'];
 
 const CheckoutRequest = z.object({
-  items: z
-    .array(
-      z.object({
-        productId: z.number('produkt-id saknas').int('ogiltigt produkt-id').positive('ogiltigt produkt-id'),
-        quantity: z
-          .number('antal saknas')
-          .int('antal måste vara ett heltal')
-          .min(1, 'antal måste vara minst 1')
-          .max(99, 'högst 99 st per produkt'),
-      })
-    )
-    .min(1, 'Varukorgen är tom')
-    .max(50, 'För många produkter i varukorgen'),
+  items: CartItems,
   delivery: z.object({
     name: z.string().trim().min(1, 'Namn krävs').max(100),
     email: z.email('Ogiltig e-postadress').max(150),
@@ -29,15 +21,11 @@ const CheckoutRequest = z.object({
     postalCode: z.string().trim().regex(/^\d{3} ?\d{2}$/, 'Postnumret måste vara fem siffror'),
     city: z.string().trim().min(1, 'Ort krävs').max(100),
   }),
+  shipping: z.object({
+    method: z.enum(['service_point', 'home'], 'Välj ett fraktalternativ'),
+    servicePointId: z.string().trim().max(20).optional(),
+  }),
 });
-
-function sumQuantities(items) {
-  const quantities = new Map();
-  for (const item of items) {
-    quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
-  }
-  return quantities;
-}
 
 router.post('/', authenticateToken, async (req, res) => {
   const parsed = CheckoutRequest.safeParse(req.body);
@@ -46,35 +34,47 @@ router.post('/', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues.map((issue) => issue.message).join(', ') });
   }
 
-  const { items, delivery } = parsed.data;
-  const quantities = sumQuantities(items);
+  const { items, delivery, shipping } = parsed.data;
+  const postalCode = delivery.postalCode.replace(' ', '');
 
-  const [products] = await pool.query('SELECT id, name, price, stock FROM products WHERE id IN (?)', [
-    [...quantities.keys()],
-  ]);
-  const productsById = new Map(products.map((product) => [product.id, product]));
-
-  const lines = [];
-  for (const [productId, quantity] of quantities) {
-    const product = productsById.get(productId);
-
-    if (!product) {
-      return res.status(400).json({ error: `En produkt i varukorgen finns inte längre (id ${productId})` });
+  let lines;
+  let subtotalInOre;
+  try {
+    ({ lines, subtotalInOre } = await priceCart(items));
+  } catch (error) {
+    if (error instanceof CartError) {
+      return res.status(error.status).json({ error: error.message });
     }
-
-    if (product.stock < quantity) {
-      return res.status(409).json({ error: `Det finns bara ${product.stock} st kvar av ${product.name}` });
-    }
-
-    lines.push({
-      productId,
-      name: product.name,
-      quantity,
-      unitAmount: Math.round(Number(product.price) * 100),
-    });
+    throw error;
   }
 
-  const totalInOre = lines.reduce((sum, line) => sum + line.unitAmount * line.quantity, 0);
+  let servicePoint = null;
+  if (shipping.method === 'service_point') {
+    if (!shipping.servicePointId) {
+      return res.status(400).json({ error: 'Välj ett ombud' });
+    }
+
+    let nearby;
+    try {
+      nearby = await findServicePoints(postalCode);
+    } catch (error) {
+      if (error instanceof ExternalServiceError) {
+        console.error('[PostNord] Ombudskontroll:', error.cause ?? error.message);
+        return res
+          .status(502)
+          .json({ error: 'Kunde inte kontrollera ombudet hos PostNord. Försök igen eller välj hemleverans.' });
+      }
+      throw error;
+    }
+
+    servicePoint = nearby.find((point) => point.id === shipping.servicePointId) ?? null;
+    if (!servicePoint) {
+      return res.status(400).json({ error: 'Det valda ombudet finns inte nära ditt postnummer. Välj ett ombud i listan.' });
+    }
+  }
+
+  const shippingInOre = shippingPriceInOre(shipping.method, subtotalInOre);
+  const totalInOre = subtotalInOre + shippingInOre;
 
   const connection = await pool.getConnection();
   let orderId;
@@ -84,16 +84,21 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const [orderResult] = await connection.query(
       `INSERT INTO orders
-        (user_id, status, payment_status, total, delivery_name, delivery_email, delivery_address, delivery_postal_code, delivery_city)
-       VALUES (?, 'Beställd', 'Obetald', ?, ?, ?, ?, ?, ?)`,
+        (user_id, status, payment_status, total, delivery_name, delivery_email, delivery_address,
+         delivery_postal_code, delivery_city, shipping_method, shipping_price, service_point_id, service_point_name)
+       VALUES (?, 'Beställd', 'Obetald', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.id,
         totalInOre / 100,
         delivery.name,
         delivery.email,
         delivery.address,
-        delivery.postalCode,
+        postalCode,
         delivery.city,
+        shipping.method,
+        shippingInOre / 100,
+        servicePoint?.id ?? null,
+        servicePoint ? `${servicePoint.name}, ${servicePoint.address}, ${servicePoint.city}` : null,
       ]
     );
 
@@ -114,12 +119,17 @@ router.post('/', authenticateToken, async (req, res) => {
     connection.release();
   }
 
+  const stripeLines = [...lines];
+  if (shippingInOre > 0) {
+    stripeLines.push({ name: `Frakt: ${SHIPPING_METHODS[shipping.method].label}`, quantity: 1, unitAmount: shippingInOre });
+  }
+
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
   const session = await createCheckoutSession({
     orderId,
     customerEmail: delivery.email,
-    lines,
+    lines: stripeLines,
     successUrl: `${frontendUrl}/orderbekraftelse/${orderId}`,
     cancelUrl: `${frontendUrl}/orderbekraftelse/${orderId}?avbruten=1`,
   });
@@ -141,7 +151,8 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   const [orders] = await pool.query(
     `SELECT id, user_id, status, payment_status, total, delivery_name, delivery_address,
-            delivery_postal_code, delivery_city, created_at, paid_at
+            delivery_postal_code, delivery_city, shipping_method, shipping_price, service_point_name,
+            created_at, paid_at
      FROM orders WHERE id = ?`,
     [req.params.id]
   );

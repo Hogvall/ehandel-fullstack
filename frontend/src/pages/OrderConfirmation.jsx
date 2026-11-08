@@ -111,6 +111,12 @@ function OrderConfirmation() {
           </li>
         ))}
       </ul>
+      <p>
+        Frakt: {order.shipping_method === 'home' ? 'Hemleverans' : 'Hämta hos ombud'}
+        {' – '}
+        {Number(order.shipping_price) === 0 ? 'Fri frakt' : `${Number(order.shipping_price).toFixed(2)} kr`}
+      </p>
+      {order.service_point_name && <p>Ombud: {order.service_point_name}</p>}
       <p className="total-line">Totalt: {Number(order.total).toFixed(2)} kr</p>
 
       <Link to="/" className="btn">Fortsätt handla</Link>

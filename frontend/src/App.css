@@ -385,3 +385,17 @@ a {
 .upload-button {
   cursor: pointer;
 }
+
+.shipping-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem; 
+}
+
+.shipping-options { 
+  display: flex;
+  gap:0.75rem;
+  align-items: flex-start;
+  cursor: pointer;
+}

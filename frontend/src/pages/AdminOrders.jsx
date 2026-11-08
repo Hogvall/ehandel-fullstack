@@ -57,6 +57,7 @@ function loadOrders() {
             <th>Order-id</th>
             <th>Kund</th>
             <th>Totalsumma</th>
+            <th>Frakt</th>
             <th>Betalning</th>
             <th>Status</th>
           </tr>
@@ -67,6 +68,11 @@ function loadOrders() {
               <td>{order.id}</td>
               <td>{order.customer_name}</td>
               <td>{order.total} kr</td>
+              <td>
+                {order.shipping_method === 'home' ? 'Hemleverans' : order.shipping_method === 'service_point' ? 'Ombud' : '–'}
+                {order.shipping_method && ` (${order.shipping_price} kr)`}
+                {order.service_point_name && <div className="search-meta">{order.service_point_name}</div>}
+              </td>
               <td>{order.payment_status}</td>
               <td>
                 <select

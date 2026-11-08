@@ -1,14 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { API_URL } from '../config.js';
+
+const POSTAL_CODE_PATTERN = /^\d{3} ?\d{2}$/;
+
+function formatDelivery(estimate) {
+  if (!estimate) return 'Leveranstid kunde inte hämtas';
+  if (estimate.date) {
+    const date = new Date(`${estimate.date}T12:00:00`);
+    const weekday = date.toLocaleDateString('sv-SE', { weekday: 'long' });
+    return `Beräknad leverans: ${weekday} ${date.getDate()}/${date.getMonth() + 1}`;
+  }
+  return `Beräknad leverans: ${estimate.daysMin}–${estimate.daysMax} dagar`;
+}
 
 function Checkout() {
   const { cartItems } = useCart();
   const { user, token } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState(null);
+  const [shippingMethod, setShippingMethod] = useState('service_point');
+  const [servicePointId, setServicePointId] = useState('');
 
   const [delivery, setDelivery] = useState({
     name: user?.name || '',
@@ -18,11 +34,48 @@ function Checkout() {
     city: '',
   });
 
-  const estimatedTotal = cartItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
+  const postalCodeIsValid = POSTAL_CODE_PATTERN.test(delivery.postalCode.trim());
+  const orderItemsJson = JSON.stringify(cartItems.map((item) => ({ productId: item.id, quantity: item.quantity })));
+
+  useEffect(() => {
+    const orderItems = JSON.parse(orderItemsJson);
+    if (!postalCodeIsValid || orderItems.length === 0) return;
+
+    const controller = new AbortController();
+
+    fetch(`${API_URL}/api/shipping/quote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({ items: orderItems, postalCode: delivery.postalCode.trim() }),
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Kunde inte hämta fraktalternativ');
+        return data;
+      })
+      .then((data) => {
+        setQuote(data);
+        setQuoteError(null);
+        setServicePointId(data.servicePoints?.[0]?.id ?? '');
+        if (!data.servicePoints?.length) setShippingMethod('home');
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        setQuote(null);
+        setQuoteError(err.message);
+      });
+
+    return () => controller.abort();
+  }, [delivery.postalCode, postalCodeIsValid, orderItemsJson]);
 
   function handleChange(e) {
     setDelivery({ ...delivery, [e.target.name]: e.target.value });
   }
+
+  const activeQuote = postalCodeIsValid ? quote : null;
+  const selectedOption = activeQuote?.options.find((option) => option.method === shippingMethod);
+  const estimatedSubtotal = cartItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
 
   async function handleConfirm(e) {
     e.preventDefault();
@@ -39,6 +92,10 @@ function Checkout() {
         body: JSON.stringify({
           items: cartItems.map((item) => ({ productId: item.id, quantity: item.quantity })),
           delivery,
+          shipping: {
+            method: shippingMethod,
+            servicePointId: shippingMethod === 'service_point' ? servicePointId : undefined,
+          },
         }),
       });
 
@@ -93,7 +150,6 @@ function Checkout() {
           </li>
         ))}
       </ul>
-      <p className="total-line">Totalt: {estimatedTotal.toFixed(2)} kr</p>
 
       <form className="form-card" onSubmit={handleConfirm}>
         <label>Namn
@@ -106,15 +162,74 @@ function Checkout() {
           <input name="address" value={delivery.address} onChange={handleChange} required />
         </label>
         <label>Postnummer
-          <input name="postalCode" value={delivery.postalCode} onChange={handleChange} required />
+          <input name="postalCode" value={delivery.postalCode} onChange={handleChange} inputMode="numeric" required />
         </label>
         <label>Ort
           <input name="city" value={delivery.city} onChange={handleChange} required />
         </label>
 
+        <h2>Frakt</h2>
+        {!postalCodeIsValid && <p className="search-meta">Fyll i ditt postnummer för att se fraktalternativ.</p>}
+        {postalCodeIsValid && quoteError && <p className="error-text">{quoteError}</p>}
+        {postalCodeIsValid && !activeQuote && !quoteError && <p>Hämtar fraktalternativ...</p>}
+
+        {activeQuote && (
+          <div className="shipping-options">
+            {activeQuote.options.map((option) => (
+              <label key={option.method} className="shipping-option">
+                <input
+                  type="radio"
+                  name="shippingMethod"
+                  value={option.method}
+                  checked={shippingMethod === option.method}
+                  onChange={() => setShippingMethod(option.method)}
+                  disabled={option.method === 'service_point' && !activeQuote.servicePoints?.length}
+                />
+                <span>
+                  <strong>{option.label}</strong> – {option.price === 0 ? 'Fri frakt' : `${option.price} kr`}
+                  <br />
+                  <span className="search-meta">{formatDelivery(option.estimatedDelivery)}</span>
+                </span>
+              </label>
+            ))}
+
+            {activeQuote.subtotal < activeQuote.freeShippingLimit && (
+              <p className="search-meta">Fri frakt när du handlar för minst {activeQuote.freeShippingLimit} kr.</p>
+            )}
+
+            {shippingMethod === 'service_point' && activeQuote.servicePoints?.length > 0 && (
+              <label>Välj ombud
+                <select value={servicePointId} onChange={(e) => setServicePointId(e.target.value)} required>
+                  {activeQuote.servicePoints.map((point) => (
+                    <option key={point.id} value={point.id}>
+                      {point.name}, {point.address}, {point.city}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {activeQuote.servicePoints === null && (
+              <p className="notice-text">Ombud kunde inte hämtas från PostNord just nu. Du kan välja hemleverans.</p>
+            )}
+          </div>
+        )}
+
+        <p className="total-line">
+          Varor: {estimatedSubtotal.toFixed(2)} kr
+          {selectedOption && (
+            <>
+              <br />
+              Frakt: {selectedOption.price.toFixed(2)} kr
+              <br />
+              Att betala: {(activeQuote.subtotal + selectedOption.price).toFixed(2)} kr
+            </>
+          )}
+        </p>
+
         {error && <p className="error-text">Fel: {error}</p>}
 
-        <button type="submit" className="btn" disabled={submitting}>
+        <button type="submit" className="btn" disabled={submitting || !selectedOption}>
           {submitting ? 'Skickar till betalning...' : 'Gå till betalning'}
         </button>
       </form>
